@@ -129,7 +129,7 @@ class _K7InsightsScreenState extends State<K7InsightsScreen> {
                         children: [
                           _buildEvidenceRow(
                             'Current plan',
-                            'Plus · 2 TB · ₹999/mo',
+                            'Plus · 2 TB · \$9.99/mo',
                           ),
                           const Padding(
                             padding: EdgeInsets.symmetric(vertical: 12.0),
@@ -170,7 +170,7 @@ class _K7InsightsScreenState extends State<K7InsightsScreen> {
                     ),
                     const SizedBox(height: 6),
                     const Text(
-                      '₹650',
+                      '\$6.50',
                       style: TextStyle(
                         fontSize: 36,
                         fontWeight: FontWeight.bold,
@@ -179,7 +179,7 @@ class _K7InsightsScreenState extends State<K7InsightsScreen> {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'Per month · ₹7,800/year if available and retained',
+                      'Per month · \$78.00/year if available and retained',
                       style: TextStyle(fontSize: 13, color: Color(0xFF777777)),
                     ),
                     const SizedBox(height: 24),
@@ -247,7 +247,7 @@ class _K7InsightsScreenState extends State<K7InsightsScreen> {
                     _buildOptionCard(
                       value: 0,
                       title: 'Keep current',
-                      subtitle: 'Retain capacity and features. ₹999/month.',
+                      subtitle: 'Retain capacity and features. \$9.99/month.',
                     ),
                     const SizedBox(height: 12),
 

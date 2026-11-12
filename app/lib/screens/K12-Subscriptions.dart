@@ -33,14 +33,14 @@ class _K12SubscriptionsScreenState extends State<K12SubscriptionsScreen> {
       if (mounted) {
         setState(() {
           _subscriptions = data.map((sub) {
-            final amount = (sub['amount'] as num).toStringAsFixed(0);
+            final amount = (sub['amount'] as num).toStringAsFixed(2);
             return {
               ...sub,
               'raw_amount': sub['amount'],
               'initial': (sub['merchant'] as String).substring(0, 1),
               'name': sub['merchant'],
               'date': 'Renews ${sub['next_billing_at'] ?? 'unknown'}',
-              'amount': '₹$amount /mo',
+              'amount': '\$$amount /mo',
               'statusColor': sub['status'] == 'Needs review'
                   ? const Color(0xFF1B4332)
                   : const Color(0xFF777777),
@@ -270,7 +270,7 @@ class _K12SubscriptionsScreenState extends State<K12SubscriptionsScreen> {
                     // Footer Note
                     const Center(
                       child: Text(
-                        'All amounts in INR. Monthly frequency for these eight\nfictional services. Last reviewed 11 Oct 2026.',
+                        'All amounts in USD. Monthly frequency for these\nsandbox services.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 12,
@@ -364,7 +364,7 @@ class _K12SubscriptionsScreenState extends State<K12SubscriptionsScreen> {
       0,
       (sum, sub) => sum + ((sub['raw_amount'] as num?)?.toDouble() ?? 0),
     );
-    return '₹${(annual ? total * 12 : total).toStringAsFixed(0)}';
+    return '\$${(annual ? total * 12 : total).toStringAsFixed(2)}';
   }
 
   Widget _buildSortChip(String label) {

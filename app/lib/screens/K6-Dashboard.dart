@@ -127,7 +127,7 @@ class _K6DashboardScreenState extends State<K6DashboardScreen> {
                     const SizedBox(height: 8),
                     Text(
                       'Based on currently available subscription and payment data.\n'
-                      '${(_dashboard?['subscriptions'] as List?)?.length ?? 0} active · INR.',
+                      '${(_dashboard?['subscriptions'] as List?)?.length ?? 0} active · USD.',
                       style: TextStyle(
                         fontSize: 13,
                         color: Color(0xFF777777),
@@ -401,7 +401,7 @@ class _K6DashboardScreenState extends State<K6DashboardScreen> {
 
   String _formatMoney(dynamic value) {
     final amount = value is num ? value : 0;
-    return '₹${amount.toStringAsFixed(0)}';
+    return '\$${amount.toStringAsFixed(2)}';
   }
 
   Widget _buildNavItem(

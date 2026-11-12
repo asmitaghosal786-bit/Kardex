@@ -66,9 +66,9 @@ def seed_if_needed(user_id: str) -> None:
         stamp = now()
         user_seed = hashlib.sha256(user_id.encode()).hexdigest()[:12]
         seed = [
-            (f"demo-{user_seed}-dropbox", "Dropbox Plus", "Cloud storage", 999, "INR", "MONTH", "Needs review"),
-            (f"demo-{user_seed}-spotify", "Spotify", "Music", 119, "INR", "MONTH", "Active"),
-            (f"demo-{user_seed}-youtube", "YouTube Premium", "Streaming", 149, "INR", "MONTH", "Active"),
+            (f"demo-{user_seed}-dropbox", "Dropbox Plus", "Cloud storage", 9.99, "USD", "MONTH", "Needs review"),
+            (f"demo-{user_seed}-spotify", "Spotify", "Music", 11.99, "USD", "MONTH", "Active"),
+            (f"demo-{user_seed}-youtube", "YouTube Premium", "Streaming", 14.99, "USD", "MONTH", "Active"),
         ]
         for sid, merchant, category, amount, currency, interval, status in seed:
             conn.execute(

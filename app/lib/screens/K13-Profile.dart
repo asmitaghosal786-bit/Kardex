@@ -81,12 +81,12 @@ class _K13ProfileScreenState extends State<K13ProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    _buildCancellationItem('Dropbox Plus · 22 Sep', '₹999 · confirmed demo'),
+                    _buildCancellationItem('Dropbox Plus · 22 Sep', '\$9.99 · confirmed demo'),
                     const SizedBox(height: 12),
-                    _buildCancellationItem('Notion Plus · 24 Sep', '₹800 · +₹100'),
+                    _buildCancellationItem('Notion Plus · 24 Sep', '\$8.00 · +\$1.00'),
                     const SizedBox(height: 16),
                     const Text(
-                      'PayPal demo synced 11 Oct, 09:32 IST. Notion rose from ₹700 to ₹800 in September. Cloud recommendation is still pending; no ₹650 saving realized.',
+                      'PayPal sandbox synced 11 Oct, 09:32 UTC. Notion rose from \$7.00 to \$8.00 in September. Cloud recommendation is still pending; no \$6.50 saving realized.',
                       style: TextStyle(
                         fontSize: 13,
                         color: Color(0xFF777777),
