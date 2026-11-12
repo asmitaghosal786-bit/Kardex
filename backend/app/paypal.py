@@ -5,12 +5,23 @@ import httpx
 
 from .config import get_settings
 
+_cached_token: str | None = None
+_cached_token_expires_at: datetime | None = None
+
 
 class PayPalClient:
     async def _token(self) -> str:
+        global _cached_token, _cached_token_expires_at
         settings = get_settings()
         if not settings.paypal_client_id or not settings.paypal_client_secret:
             raise RuntimeError("PayPal sandbox credentials are not configured")
+        current_time = datetime.now(timezone.utc)
+        if (
+            _cached_token
+            and _cached_token_expires_at
+            and current_time < _cached_token_expires_at
+        ):
+            return _cached_token
         async with httpx.AsyncClient(timeout=20) as client:
             response = await client.post(
                 f"{settings.paypal_base_url}/v1/oauth2/token",
@@ -19,7 +30,11 @@ class PayPalClient:
                 headers={"Accept": "application/json", "Accept-Language": "en_US"},
             )
             response.raise_for_status()
-            return response.json()["access_token"]
+            payload = response.json()
+        _cached_token = payload["access_token"]
+        expires_in = int(payload.get("expires_in", 300))
+        _cached_token_expires_at = current_time + timedelta(seconds=max(expires_in - 60, 30))
+        return _cached_token
 
     async def request(self, method: str, path: str, **kwargs: Any) -> dict[str, Any]:
         token = await self._token()
