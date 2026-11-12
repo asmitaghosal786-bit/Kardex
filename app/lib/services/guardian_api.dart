@@ -19,7 +19,7 @@ class GuardianApi {
   Future<String> _accessToken() async {
     final session = _supabase.auth.currentSession;
     if (session?.accessToken == null) {
-      throw StateError('Sign in before accessing Subscription Guardian data.');
+      throw StateError('Sign in before accessing Kardex data.');
     }
     return session!.accessToken;
   }

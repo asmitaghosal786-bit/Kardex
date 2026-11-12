@@ -44,7 +44,7 @@ class _ReportWebViewState extends State<ReportWebView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Subscription Guardian')),
+      appBar: AppBar(title: const Text('Kardex')),
       body: _loadError == null
           ? WebViewWidget(controller: _controller)
           : Center(

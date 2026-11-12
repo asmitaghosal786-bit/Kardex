@@ -29,7 +29,9 @@ class PayPalClient:
         headers["Content-Type"] = "application/json"
         async with httpx.AsyncClient(timeout=20) as client:
             response = await client.request(method, f"{settings.paypal_base_url}{path}", headers=headers, **kwargs)
-            response.raise_for_status()
+            if response.is_error:
+                detail = response.text[:1000]
+                raise RuntimeError(f"PayPal API request failed ({response.status_code}): {detail}")
             return response.json() if response.content else {}
 
     async def get_subscription(self, provider_id: str) -> dict[str, Any]:

@@ -34,9 +34,11 @@ async def main() -> None:
                 "pricing_scheme": {"fixed_price": {"value": str(item["amount"]), "currency_code": "USD"}}}],
             "payment_preferences": {"auto_bill_outstanding": True, "payment_failure_threshold": 1},
         })
-        activated = await client.request("PATCH", f"/v1/billing/plans/{plan['id']}",
-                                         json=[{"op": "replace", "path": "/status", "value": "ACTIVE"}])
-        del activated
+        plan_status = str(plan.get("status", "")).upper()
+        if plan_status in {"CREATED", "INACTIVE"}:
+            await client.request("POST", f"/v1/billing/plans/{plan['id']}/activate")
+        elif plan_status != "ACTIVE":
+            raise RuntimeError(f"PayPal returned an unexpected plan status: {plan_status or 'missing'}")
         with connection() as conn:
             conn.execute("""INSERT INTO plans
                 (id,product_id,name,amount,currency,interval,android_package,status,data_origin,created_at,updated_at)

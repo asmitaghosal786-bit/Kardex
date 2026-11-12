@@ -52,6 +52,17 @@ __pycache__/
 *.sqlite3
 backend/guardian.db
 
+# Python tooling
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# JavaScript package-manager caches
+.npm/
+.yarn/
+.pnpm-store/
+
 # Symbolication related
 app.*.symbols
 
@@ -64,6 +75,21 @@ app.*.map.json
 /android/app/release
 **/local.properties
 **/.gradle/
+**/key.properties
+*.jks
+*.keystore
+*.p12
 
 # Widget Preview related
 .widget_preview/
+
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# Flutter generated metadata and local overrides
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/pubspec_overrides.yaml
