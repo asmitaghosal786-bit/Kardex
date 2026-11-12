@@ -403,8 +403,9 @@ async def exchange_web_session(payload: WebSessionCode) -> dict[str, Any]:
         if not session or session["used_at"] or datetime.fromisoformat(session["expires_at"]) <= datetime.now(timezone.utc):
             raise HTTPException(status_code=401, detail="Web session code is invalid or expired")
         conn.execute("UPDATE web_sessions SET used_at = ? WHERE code_hash = ?", (now(), code_hash))
-    if not settings.supabase_jwt_secret:
-        raise HTTPException(status_code=500, detail="SUPABASE_JWT_SECRET is not configured")
+    session_secret = settings.web_session_secret or settings.supabase_jwt_secret
+    if not session_secret:
+        raise HTTPException(status_code=500, detail="WEB_SESSION_SECRET is not configured")
     claims = {
         "sub": session["user_id"],
         "iat": datetime.now(timezone.utc),
@@ -416,7 +417,7 @@ async def exchange_web_session(payload: WebSessionCode) -> dict[str, Any]:
         claims["aud"] = settings.supabase_jwt_audience
     session_token = jwt.encode(
         claims,
-        settings.supabase_jwt_secret,
+        session_secret,
         algorithm="HS256",
     )
     return {"session_token": session_token, "user_id": session["user_id"], "expires_in_seconds": 900}

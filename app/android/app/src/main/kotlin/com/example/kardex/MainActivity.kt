@@ -13,6 +13,14 @@ import java.util.concurrent.TimeUnit
 
 class MainActivity : FlutterActivity() {
     private val channel = "kardex/usage"
+    private val mappedPackages = setOf(
+        "com.spotify.music",
+        "in.startv.hotstar",
+        "com.netflix.mediaclient",
+        "com.google.android.apps.docs",
+        "com.google.android.youtube",
+        "com.openai.chatgpt"
+    )
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -54,7 +62,7 @@ class MainActivity : FlutterActivity() {
             }
         }
         return manager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, start, end)
-            .filter { it.totalTimeInForeground > 0 }
+            .filter { it.totalTimeInForeground > 0 && mappedPackages.contains(it.packageName) }
             .map {
                 mapOf(
                     "android_package" to it.packageName,

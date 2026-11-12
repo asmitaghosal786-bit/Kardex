@@ -19,6 +19,8 @@ services:
         sync: false
       - key: SUPABASE_JWKS_URL
         sync: false
+      - key: WEB_SESSION_SECRET
+        sync: false
       - key: WEB_ORIGIN
         sync: false
       - key: API_PUBLIC_URL

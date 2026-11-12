@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -28,6 +29,9 @@ class GuardianApi {
     final response = await http.get(
       Uri.parse('$_baseUrl$path'),
       headers: {'Authorization': 'Bearer ${await _accessToken()}'},
+    ).timeout(
+      const Duration(seconds: 20),
+      onTimeout: () => throw TimeoutException('Kardex API request timed out.'),
     );
     return _decode(response);
   }
@@ -40,6 +44,9 @@ class GuardianApi {
         'Content-Type': 'application/json',
       },
       body: jsonEncode(body ?? const <String, dynamic>{}),
+    ).timeout(
+      const Duration(seconds: 20),
+      onTimeout: () => throw TimeoutException('Kardex API request timed out.'),
     );
     return _decode(response);
   }

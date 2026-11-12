@@ -36,7 +36,7 @@ class _ReportWebViewState extends State<ReportWebView> {
       )
       ..loadRequest(
         Uri.parse(
-          '$webUrl${widget.path}?code=${Uri.encodeQueryComponent(widget.code)}',
+          '$webUrl/#${widget.path}?code=${Uri.encodeQueryComponent(widget.code)}',
         ),
       );
   }

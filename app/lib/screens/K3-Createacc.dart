@@ -14,11 +14,13 @@ class K3CreateAccountScreen extends StatefulWidget {
 class _K3CreateAccountScreenState extends State<K3CreateAccountScreen> {
   bool _obscurePassword = true;
   bool _isSubmitting = false;
+  final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -35,13 +37,14 @@ class _K3CreateAccountScreenState extends State<K3CreateAccountScreen> {
       );
       return;
     }
+    final name = _nameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text;
-    if (email.isEmpty || password.length < 8) {
+    if (name.isEmpty || email.isEmpty || password.length < 8) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Enter an email and a password with at least 8 characters.',
+            'Enter your name, email, and a password with at least 8 characters.',
           ),
         ),
       );
@@ -52,6 +55,7 @@ class _K3CreateAccountScreenState extends State<K3CreateAccountScreen> {
       final response = await Supabase.instance.client.auth.signUp(
         email: email,
         password: password,
+        data: {'full_name': name},
       );
       if (response.session == null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -120,6 +124,38 @@ class _K3CreateAccountScreenState extends State<K3CreateAccountScreen> {
                       ],
                     ),
                     const SizedBox(height: 36),
+
+                    const Text(
+                      'Name',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF111111),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _nameController,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: InputDecoration(
+                        hintText: 'Your name',
+                        hintStyle: const TextStyle(
+                          color: Color(0xFF888888),
+                          fontSize: 16,
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFF1B4332)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
 
                     // Email Address Field
                     const Text(

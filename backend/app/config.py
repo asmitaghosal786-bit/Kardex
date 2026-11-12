@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     supabase_jwt_issuer: str = ""
     supabase_jwt_audience: str = ""
     supabase_jwks_url: str = ""
+    web_session_secret: str = ""
     paypal_client_id: str = ""
     paypal_client_secret: str = ""
     paypal_webhook_id: str = ""

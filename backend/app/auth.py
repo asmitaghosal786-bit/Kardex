@@ -32,9 +32,9 @@ def current_user(
         token = credentials.credentials
         algorithm = jwt.get_unverified_header(token).get("alg")
         if algorithm == "HS256":
-            if not settings.supabase_jwt_secret:
-                raise HTTPException(status_code=500, detail="SUPABASE_JWT_SECRET is not configured")
-            key = settings.supabase_jwt_secret
+            key = settings.web_session_secret or settings.supabase_jwt_secret
+            if not key:
+                raise HTTPException(status_code=500, detail="WEB_SESSION_SECRET is not configured")
             algorithms = ["HS256"]
         elif algorithm in {"ES256", "RS256"}:
             if not jwks_url:
