@@ -2,7 +2,6 @@ import hashlib
 import json
 import secrets
 import sqlite3
-from pathlib import Path
 from urllib.parse import urlencode
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -61,53 +60,39 @@ def rows(conn: Any, query: str, args: tuple[Any, ...]) -> list[dict[str, Any]]:
 def seed_if_needed(user_id: str) -> None:
     if not settings.demo_mode:
         return
-    mapping_path = Path(__file__).resolve().parents[1] / "config" / "plan_packages.json"
-    demo_catalog = json.loads(mapping_path.read_text(encoding="utf-8"))
     with connection() as conn:
+        if conn.execute("SELECT 1 FROM subscriptions WHERE user_id = ? LIMIT 1", (user_id,)).fetchone():
+            return
         stamp = now()
         user_seed = hashlib.sha256(user_id.encode()).hexdigest()[:12]
-        for item in demo_catalog:
-            plan_id = f"demo-plan-{hashlib.sha256(item['name'].encode()).hexdigest()[:12]}"
-            plan = conn.execute("SELECT id FROM plans WHERE name = ? LIMIT 1", (item["name"],)).fetchone()
-            if not plan:
-                conn.execute(
-                    """INSERT INTO plans
-                    (id,product_id,name,amount,currency,interval,android_package,status,data_origin,created_at,updated_at)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
-                    (plan_id, None, item["name"], item["amount"], "USD", "MONTH",
-                     item["android_package"], "ACTIVE", "demo_seed", stamp, stamp),
-                )
-            merchant = item["name"].replace(" (sandbox)", "")
-            category = "Streaming" if merchant in {"Netflix", "YouTube"} else "Subscription"
-            sid = f"demo-{user_seed}-{hashlib.sha256(item['name'].encode()).hexdigest()[:10]}"
-            status = "Active"
+        seed = [
+            (f"demo-{user_seed}-dropbox", "Dropbox Plus", "Cloud storage", 9.99, "USD", "MONTH", "Needs review"),
+            (f"demo-{user_seed}-spotify", "Spotify", "Music", 11.99, "USD", "MONTH", "Active"),
+            (f"demo-{user_seed}-youtube", "YouTube Premium", "Streaming", 14.99, "USD", "MONTH", "Active"),
+        ]
+        for sid, merchant, category, amount, currency, interval, status in seed:
             conn.execute(
                 """INSERT INTO subscriptions
                 (id,user_id,provider_id,merchant,plan_name,category,amount,currency,interval,
                  next_billing_at,status,data_origin,created_at,updated_at)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-                ON CONFLICT(id) DO NOTHING""",
-                (sid, user_id, None, merchant, item["name"], category, item["amount"], "USD", "MONTH",
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (sid, user_id, None, merchant, merchant, category, amount, currency, interval,
                  (datetime.now(timezone.utc) + timedelta(days=5)).isoformat(), status,
                  "demo_seed", stamp, stamp),
             )
             conn.execute(
                 """INSERT INTO transactions
                 (id,user_id,provider_id,merchant,amount,currency,occurred_at,status,category,subscription_id,data_origin)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?)
-                ON CONFLICT(id) DO NOTHING""",
-                (f"txn-{sid}", user_id, None, merchant, item["amount"], "USD", stamp[:10], "COMPLETED",
+                VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                (f"txn-{sid}", user_id, None, merchant, amount, currency, stamp[:10], "COMPLETED",
                  category, sid, "demo_seed"),
             )
-        spotify = next(item for item in demo_catalog if item["name"] == "Spotify (sandbox)")
-        spotify_id = f"demo-{user_seed}-{hashlib.sha256(spotify['name'].encode()).hexdigest()[:10]}"
         conn.execute(
             """INSERT INTO usage_stats
             (id,user_id,subscription_id,merchant,usage_minutes,period_start,period_end,source,data_origin,created_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?)
-            ON CONFLICT(id) DO NOTHING""",
-            (f"usage-{user_seed}-spotify", user_id, spotify_id, "Spotify", 12,
-             "2026-11-01", "2026-11-10", "measured", "demo_seed", stamp),
+            VALUES (?,?,?,?,?,?,?,?,?,?)""",
+            (f"usage-{user_seed}-dropbox", user_id, f"demo-{user_seed}-dropbox", "Dropbox Plus", 12, "2026-11-01", "2026-11-10",
+             "measured", "demo_seed", stamp),
         )
 
 
