@@ -57,14 +57,25 @@ class PayPalClient:
         return payload.get("plans", [])
 
     async def create_subscription(self, plan_id: str, return_url: str, cancel_url: str) -> dict[str, Any]:
+        start_time = datetime.now(timezone.utc) + timedelta(minutes=1)
         return await self.request(
             "POST", "/v1/billing/subscriptions",
-            json={"plan_id": plan_id, "application_context": {
-                "brand_name": "Kardex",
-                "user_action": "SUBSCRIBE_NOW",
-                "return_url": return_url,
-                "cancel_url": cancel_url,
-            }},
+            json={
+                "plan_id": plan_id,
+                "start_time": start_time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "quantity": "1",
+                "application_context": {
+                    "brand_name": "Kardex",
+                    "shipping_preference": "NO_SHIPPING",
+                    "user_action": "SUBSCRIBE_NOW",
+                    "payment_method": {
+                        "payer_selected": "PAYPAL",
+                        "payee_preferred": "IMMEDIATE_PAYMENT_REQUIRED",
+                    },
+                    "return_url": return_url,
+                    "cancel_url": cancel_url,
+                },
+            },
         )
 
     async def subscription_transactions(self, provider_id: str) -> list[dict[str, Any]]:

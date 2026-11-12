@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kardex/screens/K5-Usageaccess.dart';
-import 'package:kardex/screens/paypal_webview.dart';
 import 'package:kardex/services/guardian_api.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class K4ConnectPaypalScreen extends StatefulWidget {
   const K4ConnectPaypalScreen({super.key});
@@ -12,6 +12,27 @@ class K4ConnectPaypalScreen extends StatefulWidget {
 
 class _K4ConnectPaypalScreenState extends State<K4ConnectPaypalScreen> {
   bool _loading = false;
+  bool _awaitingApproval = false;
+
+  Future<void> _syncAfterApproval() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      await GuardianApi().post('/api/sync');
+      if (!context.mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const K5UsageAccessScreen()),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString().replaceFirst('Bad state: ', ''))),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -248,6 +269,10 @@ class _K4ConnectPaypalScreenState extends State<K4ConnectPaypalScreen> {
                 child: ElevatedButton(
                   onPressed: () async {
                     if (_loading) return;
+                    if (_awaitingApproval) {
+                      await _syncAfterApproval();
+                      return;
+                    }
                     setState(() => _loading = true);
                     try {
                       final plans = await GuardianApi().paypalPlans();
@@ -256,13 +281,18 @@ class _K4ConnectPaypalScreenState extends State<K4ConnectPaypalScreen> {
                       } else {
                         final selected = plans.first;
                         final created = await GuardianApi().subscribePaypal(selected['id'] as String);
-                        if (!context.mounted) return;
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => PaypalWebView(approveUrl: created['approve_url'] as String),
+                        final approvalUri = Uri.parse(created['approve_url'] as String);
+                        if (!await launchUrl(approvalUri, mode: LaunchMode.externalApplication)) {
+                          throw StateError('Could not open the PayPal Sandbox approval page.');
+                        }
+                        if (!mounted) return;
+                        setState(() => _awaitingApproval = true);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Approve PayPal in your browser, then return here and tap Sync after approval.'),
                           ),
                         );
+                        return;
                       }
                       if (!context.mounted) return;
                       Navigator.push(
@@ -293,7 +323,11 @@ class _K4ConnectPaypalScreenState extends State<K4ConnectPaypalScreen> {
                     ),
                   ),
                   child: Text(
-                    _loading ? 'Opening sandbox…' : 'Connect PayPal',
+                    _loading
+                        ? 'Working…'
+                        : _awaitingApproval
+                            ? 'Sync after approval'
+                            : 'Connect PayPal',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                 ),
