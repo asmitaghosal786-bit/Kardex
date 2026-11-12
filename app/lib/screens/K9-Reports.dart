@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:kardex/screens/K11-Reports2.dart';
+import 'package:kardex/screens/report_webview.dart';
 import 'package:kardex/screens/K12-Subscriptions.dart';
 import 'package:kardex/screens/K13-Profile.dart';
 import 'package:kardex/screens/K6-Dashboard.dart';
+import 'package:kardex/services/guardian_api.dart';
 import 'package:kardex/widgets/kardex_logo.dart';
 
 class K9ReportsScreen extends StatefulWidget {
@@ -14,6 +15,31 @@ class K9ReportsScreen extends StatefulWidget {
 
 class _K9ReportsScreenState extends State<K9ReportsScreen> {
   int _currentIndex = 2; // Reports is index 2
+  bool _opening = false;
+
+  Future<void> _openExplorer(String route) async {
+    setState(() => _opening = true);
+    try {
+    final code = await GuardianApi().createWebSession();
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ReportWebView(path: route, code: code),
+      ),
+    );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error.toString().replaceFirst('Bad state: ', '')),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _opening = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +50,10 @@ class _K9ReportsScreenState extends State<K9ReportsScreen> {
           children: [
             // Top Bar
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 16.0,
+              ),
               child: Row(
                 children: [
                   const KardexLogo(size: 32),
@@ -45,7 +74,10 @@ class _K9ReportsScreenState extends State<K9ReportsScreen> {
             // Scrollable Content
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 8.0,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -81,14 +113,9 @@ class _K9ReportsScreenState extends State<K9ReportsScreen> {
                     ),
                     const SizedBox(height: 14),
                     GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const K11Reports2Screen(),
-                          ),
-                        );
-                      },
+                      onTap: _opening
+                          ? null
+                          : () => _openExplorer('/transactions'),
                       child: Text(
                         'VIEW',
                         style: TextStyle(
@@ -121,14 +148,7 @@ class _K9ReportsScreenState extends State<K9ReportsScreen> {
                     ),
                     const SizedBox(height: 14),
                     GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const K11Reports2Screen(),
-                          ),
-                        );
-                      },
+                      onTap: _opening ? null : () => _openExplorer('/spending'),
                       child: Text(
                         'VIEW',
                         style: TextStyle(
@@ -153,14 +173,32 @@ class _K9ReportsScreenState extends State<K9ReportsScreen> {
                   top: BorderSide(color: const Color(0xFFE5E5DF), width: 1),
                 ),
               ),
-              padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 16.0),
+              padding: const EdgeInsets.symmetric(
+                vertical: 10.0,
+                horizontal: 16.0,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   _buildNavItem(0, Icons.home_outlined, Icons.home, 'Home'),
-                  _buildNavItem(1, Icons.layers_outlined, Icons.layers, 'Subscriptions'),
-                  _buildNavItem(2, Icons.bar_chart_outlined, Icons.bar_chart, 'Reports'),
-                  _buildNavItem(3, Icons.person_outline, Icons.person, 'Profile'),
+                  _buildNavItem(
+                    1,
+                    Icons.layers_outlined,
+                    Icons.layers,
+                    'Subscriptions',
+                  ),
+                  _buildNavItem(
+                    2,
+                    Icons.bar_chart_outlined,
+                    Icons.bar_chart,
+                    'Reports',
+                  ),
+                  _buildNavItem(
+                    3,
+                    Icons.person_outline,
+                    Icons.person,
+                    'Profile',
+                  ),
                 ],
               ),
             ),
@@ -170,7 +208,12 @@ class _K9ReportsScreenState extends State<K9ReportsScreen> {
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, IconData selectedIcon, String label) {
+  Widget _buildNavItem(
+    int index,
+    IconData icon,
+    IconData selectedIcon,
+    String label,
+  ) {
     bool isSelected = _currentIndex == index;
     return GestureDetector(
       onTap: () {
@@ -182,7 +225,9 @@ class _K9ReportsScreenState extends State<K9ReportsScreen> {
         } else if (index == 1) {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const K12SubscriptionsScreen()),
+            MaterialPageRoute(
+              builder: (context) => const K12SubscriptionsScreen(),
+            ),
           );
         } else if (index == 3) {
           Navigator.push(
@@ -206,7 +251,9 @@ class _K9ReportsScreenState extends State<K9ReportsScreen> {
             ),
             child: Icon(
               isSelected ? selectedIcon : icon,
-              color: isSelected ? const Color(0xFF1B4332) : const Color(0xFF777777),
+              color: isSelected
+                  ? const Color(0xFF1B4332)
+                  : const Color(0xFF777777),
               size: 24,
             ),
           ),
@@ -216,7 +263,9 @@ class _K9ReportsScreenState extends State<K9ReportsScreen> {
             style: TextStyle(
               fontSize: 11,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-              color: isSelected ? const Color(0xFF1B4332) : const Color(0xFF777777),
+              color: isSelected
+                  ? const Color(0xFF1B4332)
+                  : const Color(0xFF777777),
             ),
           ),
         ],

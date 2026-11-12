@@ -3,6 +3,7 @@ import 'package:kardex/screens/K12-Subscriptions.dart';
 import 'package:kardex/screens/K13-Profile.dart';
 import 'package:kardex/screens/K7-Insights.dart';
 import 'package:kardex/screens/K9-Reports.dart';
+import 'package:kardex/services/guardian_api.dart';
 import 'package:kardex/widgets/kardex_logo.dart';
 
 class K6DashboardScreen extends StatefulWidget {
@@ -14,6 +15,23 @@ class K6DashboardScreen extends StatefulWidget {
 
 class _K6DashboardScreenState extends State<K6DashboardScreen> {
   int _currentIndex = 0;
+  Map<String, dynamic>? _dashboard;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboard();
+  }
+
+  Future<void> _loadDashboard() async {
+    try {
+      final data = await GuardianApi().dashboard();
+      if (mounted) setState(() => _dashboard = data);
+    } catch (error) {
+      if (mounted) setState(() => _error = error.toString());
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +42,10 @@ class _K6DashboardScreenState extends State<K6DashboardScreen> {
           children: [
             // Top Bar
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 16.0,
+              ),
               child: Row(
                 children: [
                   const KardexLogo(size: 32),
@@ -45,10 +66,23 @@ class _K6DashboardScreenState extends State<K6DashboardScreen> {
             // Scrollable Content
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 8.0,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (_error != null)
+                      Text(
+                        'Could not load live data: $_error',
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    if (_dashboard == null && _error == null)
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 20),
+                        child: LinearProgressIndicator(),
+                      ),
                     // Welcome Header
                     const Text(
                       'WELCOME, USER',
@@ -81,8 +115,8 @@ class _K6DashboardScreenState extends State<K6DashboardScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      '₹4,280',
+                    Text(
+                      _formatMoney(_dashboard?['monthly_cost'] ?? 0),
                       style: TextStyle(
                         fontSize: 42,
                         fontWeight: FontWeight.bold,
@@ -91,8 +125,9 @@ class _K6DashboardScreenState extends State<K6DashboardScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Based on currently available subscription and payment data.\n8 active · INR.',
+                    Text(
+                      'Based on currently available subscription and payment data.\n'
+                      '${(_dashboard?['subscriptions'] as List?)?.length ?? 0} active · INR.',
                       style: TextStyle(
                         fontSize: 13,
                         color: Color(0xFF777777),
@@ -106,8 +141,8 @@ class _K6DashboardScreenState extends State<K6DashboardScreen> {
                     // Projected Monthly Savings
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
-                        Text(
+                      children: [
+                        const Text(
                           'Projected monthly savings',
                           style: TextStyle(
                             fontSize: 16,
@@ -116,7 +151,7 @@ class _K6DashboardScreenState extends State<K6DashboardScreen> {
                           ),
                         ),
                         Text(
-                          '₹650',
+                          _formatMoney(_dashboard?['projected_savings'] ?? 0),
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -157,7 +192,8 @@ class _K6DashboardScreenState extends State<K6DashboardScreen> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => const K7InsightsScreen(),
+                                    builder: (context) =>
+                                        const K7InsightsScreen(),
                                   ),
                                 );
                               },
@@ -177,32 +213,29 @@ class _K6DashboardScreenState extends State<K6DashboardScreen> {
                     const SizedBox(height: 16),
 
                     // Subscription List Items
-                    _buildSubscriptionItem(
-                      initial: 'D',
-                      name: 'Dropbox Plus',
-                      date: '14 Oct',
-                      amount: '₹999',
-                      status: 'In 3 days',
-                      statusColor: const Color(0xFF1B4332),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildSubscriptionItem(
-                      initial: 'S',
-                      name: 'Spotify',
-                      date: '16 Oct',
-                      amount: '₹119',
-                      status: 'Active',
-                      statusColor: const Color(0xFF777777),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildSubscriptionItem(
-                      initial: 'Y',
-                      name: 'YouTube Premium',
-                      date: '18 Oct',
-                      amount: '₹149',
-                      status: 'Active',
-                      statusColor: const Color(0xFF777777),
-                    ),
+                    ...((_dashboard?['subscriptions'] as List?) ?? const [])
+                        .take(3)
+                        .map((item) {
+                          final sub = Map<String, dynamic>.from(item as Map);
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: _buildSubscriptionItem(
+                              initial: (sub['merchant'] as String).substring(
+                                0,
+                                1,
+                              ),
+                              name: sub['merchant'] as String,
+                              date:
+                                  sub['next_billing_at']?.toString() ??
+                                  'Renewal unavailable',
+                              amount: _formatMoney(sub['amount']),
+                              status: sub['status'] as String,
+                              statusColor: sub['status'] == 'Needs review'
+                                  ? const Color(0xFF1B4332)
+                                  : const Color(0xFF777777),
+                            ),
+                          );
+                        }),
                     const SizedBox(height: 16),
 
                     // See All Link
@@ -232,14 +265,32 @@ class _K6DashboardScreenState extends State<K6DashboardScreen> {
                   top: BorderSide(color: const Color(0xFFE5E5DF), width: 1),
                 ),
               ),
-              padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 16.0),
+              padding: const EdgeInsets.symmetric(
+                vertical: 10.0,
+                horizontal: 16.0,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   _buildNavItem(0, Icons.home_outlined, Icons.home, 'Home'),
-                  _buildNavItem(1, Icons.layers_outlined, Icons.layers, 'Subscriptions'),
-                  _buildNavItem(2, Icons.bar_chart_outlined, Icons.bar_chart, 'Reports'),
-                  _buildNavItem(3, Icons.person_outline, Icons.person, 'Profile'),
+                  _buildNavItem(
+                    1,
+                    Icons.layers_outlined,
+                    Icons.layers,
+                    'Subscriptions',
+                  ),
+                  _buildNavItem(
+                    2,
+                    Icons.bar_chart_outlined,
+                    Icons.bar_chart,
+                    'Reports',
+                  ),
+                  _buildNavItem(
+                    3,
+                    Icons.person_outline,
+                    Icons.person,
+                    'Profile',
+                  ),
                 ],
               ),
             ),
@@ -348,14 +399,26 @@ class _K6DashboardScreenState extends State<K6DashboardScreen> {
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, IconData selectedIcon, String label) {
+  String _formatMoney(dynamic value) {
+    final amount = value is num ? value : 0;
+    return '₹${amount.toStringAsFixed(0)}';
+  }
+
+  Widget _buildNavItem(
+    int index,
+    IconData icon,
+    IconData selectedIcon,
+    String label,
+  ) {
     bool isSelected = _currentIndex == index;
     return GestureDetector(
       onTap: () {
         if (index == 1) {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const K12SubscriptionsScreen()),
+            MaterialPageRoute(
+              builder: (context) => const K12SubscriptionsScreen(),
+            ),
           );
         } else if (index == 2) {
           Navigator.push(
@@ -384,7 +447,9 @@ class _K6DashboardScreenState extends State<K6DashboardScreen> {
             ),
             child: Icon(
               isSelected ? selectedIcon : icon,
-              color: isSelected ? const Color(0xFF1B4332) : const Color(0xFF777777),
+              color: isSelected
+                  ? const Color(0xFF1B4332)
+                  : const Color(0xFF777777),
               size: 24,
             ),
           ),
@@ -394,7 +459,9 @@ class _K6DashboardScreenState extends State<K6DashboardScreen> {
             style: TextStyle(
               fontSize: 11,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-              color: isSelected ? const Color(0xFF1B4332) : const Color(0xFF777777),
+              color: isSelected
+                  ? const Color(0xFF1B4332)
+                  : const Color(0xFF777777),
             ),
           ),
         ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:kardex/screens/K13-Profile.dart';
 import 'package:kardex/screens/K6-Dashboard.dart';
 import 'package:kardex/screens/K9-Reports.dart';
+import 'package:kardex/services/guardian_api.dart';
 import 'package:kardex/widgets/kardex_logo.dart';
 
 class K12SubscriptionsScreen extends StatefulWidget {
@@ -17,16 +18,40 @@ class _K12SubscriptionsScreenState extends State<K12SubscriptionsScreen> {
   String _selectedSort = 'Renewal date';
   final TextEditingController _searchController = TextEditingController();
 
-  final List<Map<String, dynamic>> _subscriptions = [
-    {'initial': 'N', 'name': 'Netflix', 'category': 'Streaming', 'date': 'Renews 14 Oct', 'amount': '₹499 /mo', 'status': 'In 3 days', 'statusColor': const Color(0xFF1B4332)},
-    {'initial': 'S', 'name': 'Spotify', 'category': 'Music', 'date': 'Renews 16 Oct', 'amount': '₹119 /mo', 'status': 'Active', 'statusColor': Color(0xFF777777)},
-    {'initial': 'Y', 'name': 'YouTube Premium', 'category': 'Streaming', 'date': 'Renews 18 Oct', 'amount': '₹149 /mo', 'status': 'Active', 'statusColor': Color(0xFF777777)},
-    {'initial': 'M', 'name': 'Microsoft 365', 'category': 'Productivity', 'date': 'Renews 20 Oct', 'amount': '₹489 /mo', 'status': 'Active', 'statusColor': Color(0xFF777777)},
-    {'initial': 'D', 'name': 'Dropbox Plus', 'category': 'Cloud storage', 'date': 'Renews 22 Oct', 'amount': '₹999 /mo', 'status': 'Needs review', 'statusColor': const Color(0xFF1B4332)},
-    {'initial': 'N', 'name': 'Notion Plus', 'category': 'Productivity', 'date': 'Renews 24 Oct', 'amount': '₹800 /mo', 'status': 'Active', 'statusColor': Color(0xFF777777)},
-    {'initial': 'A', 'name': 'Adobe Photography', 'category': 'Software', 'date': 'Renews 26 Oct', 'amount': '₹888 /mo', 'status': 'Active', 'statusColor': Color(0xFF777777)},
-    {'initial': 'G', 'name': 'Google One', 'category': 'Cloud storage', 'date': 'Renews 28 Oct', 'amount': '₹337 /mo', 'status': 'Active', 'statusColor': Color(0xFF777777)},
-  ];
+  List<Map<String, dynamic>> _subscriptions = [];
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSubscriptions();
+  }
+
+  Future<void> _loadSubscriptions() async {
+    try {
+      final data = await GuardianApi().subscriptions();
+      if (mounted) {
+        setState(() {
+          _subscriptions = data.map((sub) {
+            final amount = (sub['amount'] as num).toStringAsFixed(0);
+            return {
+              ...sub,
+              'raw_amount': sub['amount'],
+              'initial': (sub['merchant'] as String).substring(0, 1),
+              'name': sub['merchant'],
+              'date': 'Renews ${sub['next_billing_at'] ?? 'unknown'}',
+              'amount': '₹$amount /mo',
+              'statusColor': sub['status'] == 'Needs review'
+                  ? const Color(0xFF1B4332)
+                  : const Color(0xFF777777),
+            };
+          }).toList();
+        });
+      }
+    } catch (error) {
+      if (mounted) setState(() => _error = error.toString());
+    }
+  }
 
   @override
   void dispose() {
@@ -65,8 +90,8 @@ class _K12SubscriptionsScreenState extends State<K12SubscriptionsScreen> {
                   ),
                   const SizedBox(height: 16),
                   // Summary Header
-                  const Text(
-                    '8 ACTIVE SUBSCRIPTIONS',
+                  Text(
+                    '${_subscriptions.length} ACTIVE SUBSCRIPTIONS',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -75,8 +100,8 @@ class _K12SubscriptionsScreenState extends State<K12SubscriptionsScreen> {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  const Text(
-                    '₹4,280',
+                  Text(
+                    _formatTotal(),
                     style: TextStyle(
                       fontSize: 38,
                       fontWeight: FontWeight.bold,
@@ -85,12 +110,9 @@ class _K12SubscriptionsScreenState extends State<K12SubscriptionsScreen> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    'Monthly · ₹51,360 annualized',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF777777),
-                    ),
+                  Text(
+                    'Monthly · ${_formatTotal(annual: true)} annualized',
+                    style: TextStyle(fontSize: 13, color: Color(0xFF777777)),
                   ),
                   const SizedBox(height: 20),
 
@@ -99,18 +121,30 @@ class _K12SubscriptionsScreenState extends State<K12SubscriptionsScreen> {
                     controller: _searchController,
                     decoration: InputDecoration(
                       hintText: 'Search your subscriptions',
-                      hintStyle: const TextStyle(color: Color(0xFF888888), fontSize: 15),
-                      prefixIcon: const Icon(Icons.search, color: Color(0xFF888888)),
+                      hintStyle: const TextStyle(
+                        color: Color(0xFF888888),
+                        fontSize: 15,
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        color: Color(0xFF888888),
+                      ),
                       filled: true,
                       fillColor: Colors.white,
                       contentPadding: const EdgeInsets.symmetric(vertical: 14),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: Color(0xFFE5E5DF), width: 1),
+                        borderSide: const BorderSide(
+                          color: Color(0xFFE5E5DF),
+                          width: 1,
+                        ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: Color(0xFF1B4332), width: 1.5),
+                        borderSide: const BorderSide(
+                          color: Color(0xFF1B4332),
+                          width: 1.5,
+                        ),
                       ),
                     ),
                   ),
@@ -163,15 +197,27 @@ class _K12SubscriptionsScreenState extends State<K12SubscriptionsScreen> {
             // Scrollable Content Below (Subscription List, Info Box, Footer)
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 16.0,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (_error != null)
+                      Text(
+                        'Could not load live data: $_error',
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    if (_subscriptions.isEmpty && _error == null)
+                      const LinearProgressIndicator(),
                     // Subscription List
-                    ..._subscriptions.map((sub) => Padding(
-                          padding: const EdgeInsets.only(bottom: 16.0),
-                          child: _buildSubscriptionCard(sub),
-                        )),
+                    ..._subscriptions.map(
+                      (sub) => Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: _buildSubscriptionCard(sub),
+                      ),
+                    ),
 
                     // Info Box at Bottom
                     Container(
@@ -247,14 +293,32 @@ class _K12SubscriptionsScreenState extends State<K12SubscriptionsScreen> {
                   top: BorderSide(color: const Color(0xFFE5E5DF), width: 1),
                 ),
               ),
-              padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 16.0),
+              padding: const EdgeInsets.symmetric(
+                vertical: 10.0,
+                horizontal: 16.0,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   _buildNavItem(0, Icons.home_outlined, Icons.home, 'Home'),
-                  _buildNavItem(1, Icons.layers_outlined, Icons.layers, 'Subscriptions'),
-                  _buildNavItem(2, Icons.bar_chart_outlined, Icons.bar_chart, 'Reports'),
-                  _buildNavItem(3, Icons.person_outline, Icons.person, 'Profile'),
+                  _buildNavItem(
+                    1,
+                    Icons.layers_outlined,
+                    Icons.layers,
+                    'Subscriptions',
+                  ),
+                  _buildNavItem(
+                    2,
+                    Icons.bar_chart_outlined,
+                    Icons.bar_chart,
+                    'Reports',
+                  ),
+                  _buildNavItem(
+                    3,
+                    Icons.person_outline,
+                    Icons.person,
+                    'Profile',
+                  ),
                 ],
               ),
             ),
@@ -278,7 +342,9 @@ class _K12SubscriptionsScreenState extends State<K12SubscriptionsScreen> {
           color: isSelected ? const Color(0xFF1B4332) : Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? const Color(0xFF1B4332) : const Color(0xFFE5E5DF),
+            color: isSelected
+                ? const Color(0xFF1B4332)
+                : const Color(0xFFE5E5DF),
           ),
         ),
         child: Text(
@@ -291,6 +357,14 @@ class _K12SubscriptionsScreenState extends State<K12SubscriptionsScreen> {
         ),
       ),
     );
+  }
+
+  String _formatTotal({bool annual = false}) {
+    final total = _subscriptions.fold<double>(
+      0,
+      (sum, sub) => sum + ((sub['raw_amount'] as num?)?.toDouble() ?? 0),
+    );
+    return '₹${(annual ? total * 12 : total).toStringAsFixed(0)}';
   }
 
   Widget _buildSortChip(String label) {
@@ -307,7 +381,9 @@ class _K12SubscriptionsScreenState extends State<K12SubscriptionsScreen> {
           color: isSelected ? const Color(0xFFEBF3EE) : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? const Color(0xFF1B4332) : const Color(0xFFE5E5DF),
+            color: isSelected
+                ? const Color(0xFF1B4332)
+                : const Color(0xFFE5E5DF),
             width: isSelected ? 1.5 : 1.0,
           ),
         ),
@@ -316,7 +392,9 @@ class _K12SubscriptionsScreenState extends State<K12SubscriptionsScreen> {
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: isSelected ? const Color(0xFF1B4332) : const Color(0xFF777777),
+            color: isSelected
+                ? const Color(0xFF1B4332)
+                : const Color(0xFF777777),
           ),
         ),
       ),
@@ -413,7 +491,12 @@ class _K12SubscriptionsScreenState extends State<K12SubscriptionsScreen> {
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, IconData selectedIcon, String label) {
+  Widget _buildNavItem(
+    int index,
+    IconData icon,
+    IconData selectedIcon,
+    String label,
+  ) {
     bool isSelected = _currentIndex == index;
     return GestureDetector(
       onTap: () {
@@ -449,7 +532,9 @@ class _K12SubscriptionsScreenState extends State<K12SubscriptionsScreen> {
             ),
             child: Icon(
               isSelected ? selectedIcon : icon,
-              color: isSelected ? const Color(0xFF1B4332) : const Color(0xFF777777),
+              color: isSelected
+                  ? const Color(0xFF1B4332)
+                  : const Color(0xFF777777),
               size: 24,
             ),
           ),
@@ -459,7 +544,9 @@ class _K12SubscriptionsScreenState extends State<K12SubscriptionsScreen> {
             style: TextStyle(
               fontSize: 11,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-              color: isSelected ? const Color(0xFF1B4332) : const Color(0xFF777777),
+              color: isSelected
+                  ? const Color(0xFF1B4332)
+                  : const Color(0xFF777777),
             ),
           ),
         ],

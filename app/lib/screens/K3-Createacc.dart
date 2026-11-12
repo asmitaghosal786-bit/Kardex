@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:kardex/screens/K4-connectpaypal.dart';
+import 'package:kardex/services/supabase_bootstrap.dart';
 import 'package:kardex/widgets/kardex_logo.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class K3CreateAccountScreen extends StatefulWidget {
   const K3CreateAccountScreen({super.key});
@@ -11,6 +13,7 @@ class K3CreateAccountScreen extends StatefulWidget {
 
 class _K3CreateAccountScreenState extends State<K3CreateAccountScreen> {
   bool _obscurePassword = true;
+  bool _isSubmitting = false;
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
@@ -21,6 +24,63 @@ class _K3CreateAccountScreenState extends State<K3CreateAccountScreen> {
     super.dispose();
   }
 
+  Future<void> _createAccount() async {
+    if (!supabaseConfigured) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Supabase is not configured. Launch with SUPABASE_URL and SUPABASE_ANON_KEY.',
+          ),
+        ),
+      );
+      return;
+    }
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    if (email.isEmpty || password.length < 8) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Enter an email and a password with at least 8 characters.',
+          ),
+        ),
+      );
+      return;
+    }
+    setState(() => _isSubmitting = true);
+    try {
+      final response = await Supabase.instance.client.auth.signUp(
+        email: email,
+        password: password,
+      );
+      if (response.session == null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Check your email to confirm your account, then sign in.',
+            ),
+          ),
+        );
+      }
+      if (mounted && response.session != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const K4ConnectPaypalScreen(),
+          ),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not create account: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -29,7 +89,10 @@ class _K3CreateAccountScreenState extends State<K3CreateAccountScreen> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 16.0,
+              ),
               child: ConstrainedBox(
                 constraints: BoxConstraints(
                   minHeight: constraints.maxHeight - 32.0,
@@ -73,17 +136,29 @@ class _K3CreateAccountScreenState extends State<K3CreateAccountScreen> {
                       keyboardType: TextInputType.emailAddress,
                       decoration: InputDecoration(
                         hintText: 'Your email',
-                        hintStyle: const TextStyle(color: Color(0xFF888888), fontSize: 16),
+                        hintStyle: const TextStyle(
+                          color: Color(0xFF888888),
+                          fontSize: 16,
+                        ),
                         filled: true,
                         fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF1B4332), width: 1.5),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF1B4332),
+                            width: 1.5,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF1B4332), width: 2.0),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF1B4332),
+                            width: 2.0,
+                          ),
                         ),
                       ),
                     ),
@@ -104,13 +179,21 @@ class _K3CreateAccountScreenState extends State<K3CreateAccountScreen> {
                       obscureText: _obscurePassword,
                       decoration: InputDecoration(
                         hintText: 'Create a password',
-                        hintStyle: const TextStyle(color: Color(0xFF888888), fontSize: 16),
+                        hintStyle: const TextStyle(
+                          color: Color(0xFF888888),
+                          fontSize: 16,
+                        ),
                         filled: true,
                         fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                            _obscurePassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
                             color: const Color(0xFF666666),
                           ),
                           onPressed: () {
@@ -121,21 +204,24 @@ class _K3CreateAccountScreenState extends State<K3CreateAccountScreen> {
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF1B4332), width: 1.5),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF1B4332),
+                            width: 1.5,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF1B4332), width: 2.0),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF1B4332),
+                            width: 2.0,
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(height: 8),
                     const Text(
                       'Use at least 8 characters, including a number.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF777777),
-                      ),
+                      style: TextStyle(fontSize: 12, color: Color(0xFF777777)),
                     ),
                     const SizedBox(height: 28),
 
@@ -144,14 +230,7 @@ class _K3CreateAccountScreenState extends State<K3CreateAccountScreen> {
                       width: double.infinity,
                       height: 56,
                       child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const K4ConnectPaypalScreen(),
-                            ),
-                          );
-                        },
+                        onPressed: _isSubmitting ? null : _createAccount,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF1B4332),
                           foregroundColor: Colors.white,
@@ -160,11 +239,13 @@ class _K3CreateAccountScreenState extends State<K3CreateAccountScreen> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              'Create Account',
+                              _isSubmitting
+                                  ? 'Creating account…'
+                                  : 'Create Account',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -182,7 +263,10 @@ class _K3CreateAccountScreenState extends State<K3CreateAccountScreen> {
                     Row(
                       children: const [
                         Expanded(
-                          child: Divider(color: Color(0xFFD0D0C8), thickness: 1),
+                          child: Divider(
+                            color: Color(0xFFD0D0C8),
+                            thickness: 1,
+                          ),
                         ),
                         Padding(
                           padding: EdgeInsets.symmetric(horizontal: 16.0),
@@ -196,7 +280,10 @@ class _K3CreateAccountScreenState extends State<K3CreateAccountScreen> {
                           ),
                         ),
                         Expanded(
-                          child: Divider(color: Color(0xFFD0D0C8), thickness: 1),
+                          child: Divider(
+                            color: Color(0xFFD0D0C8),
+                            thickness: 1,
+                          ),
                         ),
                       ],
                     ),
@@ -250,7 +337,11 @@ class _K3CreateAccountScreenState extends State<K3CreateAccountScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: const [
-                        Icon(Icons.lock_outline, size: 16, color: Color(0xFF555555)),
+                        Icon(
+                          Icons.lock_outline,
+                          size: 16,
+                          color: Color(0xFF555555),
+                        ),
                         SizedBox(width: 6),
                         Text(
                           'Your data stay private. You choose what to share.',

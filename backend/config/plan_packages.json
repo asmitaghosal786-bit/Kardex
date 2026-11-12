@@ -1,0 +1,7 @@
+[
+  {"name": "StreamMax (sandbox)", "amount": 4.99, "android_package": "com.streammax.app"},
+  {"name": "CloudBox (sandbox)", "amount": 7.99, "android_package": "com.cloudbox.app"},
+  {"name": "TuneWave (sandbox)", "amount": 9.99, "android_package": "com.tunewave.app"},
+  {"name": "FitTrack (sandbox)", "amount": 12.99, "android_package": "com.fittrack.app"},
+  {"name": "Readly (sandbox)", "amount": 16.99, "android_package": "com.readly.app"}
+]

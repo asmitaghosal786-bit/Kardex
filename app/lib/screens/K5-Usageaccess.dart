@@ -1,8 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:kardex/screens/K6-Dashboard.dart';
+import 'package:kardex/services/guardian_api.dart';
+import 'package:kardex/services/usage_access.dart';
 
-class K5UsageAccessScreen extends StatelessWidget {
+class K5UsageAccessScreen extends StatefulWidget {
   const K5UsageAccessScreen({super.key});
+
+  @override
+  State<K5UsageAccessScreen> createState() => _K5UsageAccessScreenState();
+}
+
+class _K5UsageAccessScreenState extends State<K5UsageAccessScreen> {
+  bool _hasAccess = false;
+  bool _consented = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshAccess();
+  }
+
+  Future<void> _refreshAccess() async {
+    final access = await UsageAccess.hasAccess();
+    if (mounted) setState(() => _hasAccess = access);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,8 +83,8 @@ class K5UsageAccessScreen extends StatelessWidget {
                     const SizedBox(height: 16),
 
                     // Status Text
-                    const Text(
-                      'Not granted · no usage collected',
+                    Text(
+                      _hasAccess ? 'Granted · measured usage is available' : 'Not granted · no usage collected',
                       style: TextStyle(
                         fontSize: 13,
                         color: Color(0xFF777777),
@@ -118,6 +139,41 @@ class K5UsageAccessScreen extends StatelessWidget {
                         ],
                       ),
                     ),
+                    TextButton.icon(
+                      onPressed: () async {
+                        final controller = TextEditingController();
+                        final minutes = await showDialog<double>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Enter usage manually'),
+                            content: TextField(
+                              controller: controller,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              decoration: const InputDecoration(labelText: 'Minutes used in the latest period'),
+                            ),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                              FilledButton(
+                                onPressed: () => Navigator.pop(context, double.tryParse(controller.text)),
+                                child: const Text('Save manual usage'),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (minutes == null || !context.mounted) return;
+                        await GuardianApi().addUsage(
+                          usageMinutes: minutes,
+                          periodStart: DateTime.now().subtract(const Duration(days: 30)).toIso8601String(),
+                          periodEnd: DateTime.now().toIso8601String(),
+                          source: 'manual',
+                        );
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Manual usage saved')));
+                        }
+                      },
+                      icon: const Icon(Icons.edit_outlined),
+                      label: const Text('Enter usage manually'),
+                    ),
                     const SizedBox(height: 28),
 
                     // Set it up in Android Settings Section
@@ -163,7 +219,40 @@ class K5UsageAccessScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
+                    if (!_consented) {
+                      final consent = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Share usage signals?'),
+                          content: const Text('KARDEX will read foreground time and launch signals only after you consent.'),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Not now')),
+                            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('I consent')),
+                          ],
+                        ),
+                      );
+                      if (consent != true) return;
+                      setState(() => _consented = true);
+                    }
+                    if (!_hasAccess) {
+                      await UsageAccess.requestAccess();
+                      await _refreshAccess();
+                      return;
+                    }
+                    final rows = await UsageAccess.query();
+                    final end = DateTime.now();
+                    final start = end.subtract(const Duration(days: 30));
+                    for (final row in rows) {
+                      await GuardianApi().addUsage(
+                        usageMinutes: (row['usage_minutes'] as num).toDouble(),
+                        periodStart: start.toIso8601String(),
+                        periodEnd: end.toIso8601String(),
+                        androidPackage: row['android_package'] as String,
+                        source: 'measured',
+                      );
+                    }
+                    if (!context.mounted) return;
                     Navigator.push(
                       context,
                       MaterialPageRoute(

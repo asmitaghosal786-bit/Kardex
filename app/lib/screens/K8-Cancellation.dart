@@ -1,7 +1,70 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
 
-class K8CancellationScreen extends StatelessWidget {
-  const K8CancellationScreen({super.key});
+import 'package:flutter/material.dart';
+import 'package:kardex/services/guardian_api.dart';
+
+class K8CancellationScreen extends StatefulWidget {
+  const K8CancellationScreen({this.recommendationId, super.key});
+
+  final String? recommendationId;
+
+  @override
+  State<K8CancellationScreen> createState() => _K8CancellationScreenState();
+}
+
+class _K8CancellationScreenState extends State<K8CancellationScreen> {
+  String _status = 'awaiting_action';
+  bool _submitting = false;
+  Timer? _poller;
+
+  @override
+  void dispose() {
+    _poller?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _approve() async {
+    final id = widget.recommendationId;
+    if (id == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'This demo-seeded item has no PayPal subscription id; no action was sent.',
+          ),
+        ),
+      );
+      return;
+    }
+    setState(() => _submitting = true);
+    try {
+      final result = await GuardianApi().approveRecommendation(id);
+      if (!mounted) return;
+      setState(() => _status = result['status'] as String);
+      _poller = Timer.periodic(
+        const Duration(seconds: 5),
+        (_) => _refreshStatus(id),
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error.toString().replaceFirst('Bad state: ', '')),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  Future<void> _refreshStatus(String id) async {
+    try {
+      final result = await GuardianApi().recommendationStatus(id);
+      if (!mounted) return;
+      setState(() => _status = result['status'] as String);
+      if (_status == 'verified') _poller?.cancel();
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -12,11 +75,17 @@ class K8CancellationScreen extends StatelessWidget {
           children: [
             // Top App Bar
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 12.0,
+              ),
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Color(0xFF111111)),
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      color: Color(0xFF111111),
+                    ),
                     onPressed: () => Navigator.pop(context),
                   ),
                   const SizedBox(width: 8),
@@ -33,7 +102,10 @@ class K8CancellationScreen extends StatelessWidget {
             ),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 8.0,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -72,7 +144,10 @@ class K8CancellationScreen extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFE5E5DF), width: 1),
+                        border: Border.all(
+                          color: const Color(0xFFE5E5DF),
+                          width: 1,
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,7 +156,10 @@ class K8CancellationScreen extends StatelessWidget {
                           const SizedBox(height: 16),
                           const Divider(color: Color(0xFFEEEEEE), thickness: 1),
                           const SizedBox(height: 16),
-                          _buildDetailRow('Exact requested action', 'Cancel Plan'),
+                          _buildDetailRow(
+                            'Exact requested action',
+                            'Cancel Plan',
+                          ),
                           const SizedBox(height: 16),
                           const Divider(color: Color(0xFFEEEEEE), thickness: 1),
                           const SizedBox(height: 16),
@@ -93,7 +171,10 @@ class K8CancellationScreen extends StatelessWidget {
                           const SizedBox(height: 16),
                           const Divider(color: Color(0xFFEEEEEE), thickness: 1),
                           const SizedBox(height: 16),
-                          _buildDetailRow('Execution route', 'Provider redirect'),
+                          _buildDetailRow(
+                            'Execution route',
+                            'Provider redirect',
+                          ),
                         ],
                       ),
                     ),
@@ -180,9 +261,9 @@ class K8CancellationScreen extends StatelessWidget {
                     width: double.infinity,
                     height: 56,
                     child: ElevatedButton(
-                      onPressed: () {
-                        // Action for Confirm and open provider
-                      },
+                      onPressed: _submitting || _status == 'verified'
+                          ? null
+                          : _approve,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF1B4332),
                         foregroundColor: Colors.white,
@@ -191,8 +272,12 @@ class K8CancellationScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                      child: const Text(
-                        'Confirm and open provider',
+                      child: Text(
+                        _status == 'pending_verification'
+                            ? 'Pending PayPal verification'
+                            : _status == 'verified'
+                            ? 'Cancellation verified'
+                            : 'Approve cancellation',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -209,7 +294,10 @@ class K8CancellationScreen extends StatelessWidget {
                       style: OutlinedButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: const Color(0xFF111111),
-                        side: const BorderSide(color: Color(0xFFD0D0C8), width: 1.5),
+                        side: const BorderSide(
+                          color: Color(0xFFD0D0C8),
+                          width: 1.5,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -238,10 +326,7 @@ class K8CancellationScreen extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Color(0xFF777777),
-          ),
+          style: const TextStyle(fontSize: 14, color: Color(0xFF777777)),
         ),
         Text(
           value,

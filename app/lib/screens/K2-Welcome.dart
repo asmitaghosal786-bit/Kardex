@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kardex/screens/K3-Createacc.dart';
+import 'package:kardex/screens/K16-Login.dart';
 import 'package:kardex/widgets/kardex_logo.dart';
 
 class K2WelcomeScreen extends StatelessWidget {
@@ -13,7 +14,10 @@ class K2WelcomeScreen extends StatelessWidget {
         child: LayoutBuilder(
           builder: (context, constraints) {
             return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 16.0,
+              ),
               child: ConstrainedBox(
                 constraints: BoxConstraints(
                   minHeight: constraints.maxHeight - 32.0,
@@ -107,7 +111,8 @@ class K2WelcomeScreen extends StatelessWidget {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => const K3CreateAccountScreen(),
+                                  builder: (context) =>
+                                      const K3CreateAccountScreen(),
                                 ),
                               );
                             },
@@ -135,7 +140,12 @@ class K2WelcomeScreen extends StatelessWidget {
                           height: 56,
                           child: OutlinedButton(
                             onPressed: () {
-                              // Action for Log In
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const K16LoginScreen(),
+                                ),
+                              );
                             },
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFF1B4332),

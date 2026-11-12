@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: subscription-guardian-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_PATH
+        value: /var/data/guardian.db
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      - key: WEB_ORIGIN
+        sync: false
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: DEMO_MODE
+        value: "false"
+    disk:
+      name: guardian-data
+      mountPath: /var/data
+      sizeGB: 1
+  - type: web
+    name: subscription-guardian-web
+    runtime: static
+    rootDir: web
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false
+      - key: VITE_AG_STUDIO_ENABLED
+        value: "false"
+      - key: VITE_AG_LICENSE
+        sync: false
+

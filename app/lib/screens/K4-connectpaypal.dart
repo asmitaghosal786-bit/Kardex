@@ -1,8 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:kardex/screens/K5-Usageaccess.dart';
+import 'package:kardex/screens/paypal_webview.dart';
+import 'package:kardex/services/guardian_api.dart';
 
-class K4ConnectPaypalScreen extends StatelessWidget {
+class K4ConnectPaypalScreen extends StatefulWidget {
   const K4ConnectPaypalScreen({super.key});
+
+  @override
+  State<K4ConnectPaypalScreen> createState() => _K4ConnectPaypalScreenState();
+}
+
+class _K4ConnectPaypalScreenState extends State<K4ConnectPaypalScreen> {
+  bool _loading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -13,11 +22,17 @@ class K4ConnectPaypalScreen extends StatelessWidget {
           children: [
             // Top App Bar
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 12.0,
+              ),
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Color(0xFF111111)),
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      color: Color(0xFF111111),
+                    ),
                     onPressed: () => Navigator.pop(context),
                   ),
                   const SizedBox(width: 8),
@@ -34,7 +49,10 @@ class K4ConnectPaypalScreen extends StatelessWidget {
             ),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 8.0,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -55,7 +73,7 @@ class K4ConnectPaypalScreen extends StatelessWidget {
                         ),
                         const SizedBox(width: 12),
                         const Text(
-                          'Independent connection',
+                          'Sandbox / real PayPal',
                           style: TextStyle(
                             fontSize: 14,
                             color: Color(0xFF777777),
@@ -95,7 +113,10 @@ class K4ConnectPaypalScreen extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFE5E5DF), width: 1),
+                        border: Border.all(
+                          color: const Color(0xFFE5E5DF),
+                          width: 1,
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -131,7 +152,7 @@ class K4ConnectPaypalScreen extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                'Connected',
+                                'Ready to connect',
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
@@ -199,7 +220,7 @@ class K4ConnectPaypalScreen extends StatelessWidget {
                                 ),
                                 SizedBox(height: 4),
                                 Text(
-                                  'A simulated provider sign-in opens next. KARDEX cannot move money or universally cancel subscriptions.',
+                                  'A PayPal sandbox sign-in opens next. KARDEX cannot move money or universally cancel subscriptions.',
                                   style: TextStyle(
                                     fontSize: 13,
                                     color: Color(0xFF555555),
@@ -225,13 +246,43 @@ class K4ConnectPaypalScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const K5UsageAccessScreen(),
-                      ),
-                    );
+                  onPressed: () async {
+                    if (_loading) return;
+                    setState(() => _loading = true);
+                    try {
+                      final plans = await GuardianApi().paypalPlans();
+                      if (plans.isEmpty) {
+                        await GuardianApi().post('/api/sync');
+                      } else {
+                        final selected = plans.first;
+                        final created = await GuardianApi().subscribePaypal(selected['id'] as String);
+                        if (!context.mounted) return;
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PaypalWebView(approveUrl: created['approve_url'] as String),
+                          ),
+                        );
+                      }
+                      if (!context.mounted) return;
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const K5UsageAccessScreen(),
+                        ),
+                      );
+                    } catch (error) {
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            error.toString().replaceFirst('Bad state: ', ''),
+                          ),
+                        ),
+                      );
+                    } finally {
+                      if (mounted) setState(() => _loading = false);
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1B4332),
@@ -241,12 +292,9 @@ class K4ConnectPaypalScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: const Text(
-                    'Connect PayPal',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  child: Text(
+                    _loading ? 'Opening sandbox…' : 'Connect PayPal',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:kardex/screens/K1-Splash.dart';
+import 'package:kardex/services/supabase_bootstrap.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await initializeSupabase();
   runApp(const MyApp());
 }
 

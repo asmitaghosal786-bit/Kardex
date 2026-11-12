@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kardex/screens/K8-Cancellation.dart';
+import 'package:kardex/services/guardian_api.dart';
 
 class K7InsightsScreen extends StatefulWidget {
   const K7InsightsScreen({super.key});
@@ -9,7 +10,22 @@ class K7InsightsScreen extends StatefulWidget {
 }
 
 class _K7InsightsScreenState extends State<K7InsightsScreen> {
-  int? _selectedOption = 0; // 0 for Keep current, 1 for Cancel or manage, or null
+  int? _selectedOption =
+      0; // 0 for Keep current, 1 for Cancel or manage, or null
+  String? _recommendationId;
+
+  @override
+  void initState() {
+    super.initState();
+    GuardianApi()
+        .recommendations()
+        .then((items) {
+          if (mounted && items.isNotEmpty) {
+            setState(() => _recommendationId = items.first['id'] as String);
+          }
+        })
+        .catchError((_) {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,11 +36,17 @@ class _K7InsightsScreenState extends State<K7InsightsScreen> {
           children: [
             // Top App Bar
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 12.0,
+              ),
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Color(0xFF111111)),
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      color: Color(0xFF111111),
+                    ),
                     onPressed: () => Navigator.pop(context),
                   ),
                   const SizedBox(width: 8),
@@ -42,7 +64,10 @@ class _K7InsightsScreenState extends State<K7InsightsScreen> {
             ),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 8.0,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -102,17 +127,32 @@ class _K7InsightsScreenState extends State<K7InsightsScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildEvidenceRow('Current plan', 'Plus · 2 TB · ₹999/mo'),
+                          _buildEvidenceRow(
+                            'Current plan',
+                            'Plus · 2 TB · ₹999/mo',
+                          ),
                           const Padding(
                             padding: EdgeInsets.symmetric(vertical: 12.0),
-                            child: Divider(color: Color(0xFFEEEEEE), thickness: 1),
+                            child: Divider(
+                              color: Color(0xFFEEEEEE),
+                              thickness: 1,
+                            ),
                           ),
-                          _buildEvidenceRow('Storage entered by you', '38 GB · 8 Oct 2026'),
+                          _buildEvidenceRow(
+                            'Storage entered by you',
+                            '38 GB · 8 Oct 2026',
+                          ),
                           const Padding(
                             padding: EdgeInsets.symmetric(vertical: 12.0),
-                            child: Divider(color: Color(0xFFEEEEEE), thickness: 1),
+                            child: Divider(
+                              color: Color(0xFFEEEEEE),
+                              thickness: 1,
+                            ),
                           ),
-                          _buildEvidenceRow('Android foreground', '12 min · 4–10 Oct'),
+                          _buildEvidenceRow(
+                            'Android foreground',
+                            '12 min · 4–10 Oct',
+                          ),
                         ],
                       ),
                     ),
@@ -140,10 +180,7 @@ class _K7InsightsScreenState extends State<K7InsightsScreen> {
                     const SizedBox(height: 4),
                     const Text(
                       'Per month · ₹7,800/year if available and retained',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF777777),
-                      ),
+                      style: TextStyle(fontSize: 13, color: Color(0xFF777777)),
                     ),
                     const SizedBox(height: 24),
 
@@ -233,7 +270,10 @@ class _K7InsightsScreenState extends State<K7InsightsScreen> {
                         style: OutlinedButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: const Color(0xFF111111),
-                          side: const BorderSide(color: Color(0xFFD0D0C8), width: 1.5),
+                          side: const BorderSide(
+                            color: Color(0xFFD0D0C8),
+                            width: 1.5,
+                          ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -276,10 +316,7 @@ class _K7InsightsScreenState extends State<K7InsightsScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Color(0xFF777777),
-          ),
+          style: const TextStyle(fontSize: 14, color: Color(0xFF777777)),
         ),
         Text(
           value,
@@ -293,7 +330,11 @@ class _K7InsightsScreenState extends State<K7InsightsScreen> {
     );
   }
 
-  Widget _buildOptionCard({required int value, required String title, required String subtitle}) {
+  Widget _buildOptionCard({
+    required int value,
+    required String title,
+    required String subtitle,
+  }) {
     bool isSelected = _selectedOption == value;
     return GestureDetector(
       onTap: () {
@@ -304,7 +345,8 @@ class _K7InsightsScreenState extends State<K7InsightsScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => const K8CancellationScreen(),
+              builder: (context) =>
+                  K8CancellationScreen(recommendationId: _recommendationId),
             ),
           );
         }
@@ -315,7 +357,9 @@ class _K7InsightsScreenState extends State<K7InsightsScreen> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? const Color(0xFF1B4332) : const Color(0xFFE5E5DF),
+            color: isSelected
+                ? const Color(0xFF1B4332)
+                : const Color(0xFFE5E5DF),
             width: isSelected ? 2.0 : 1.0,
           ),
         ),
@@ -327,7 +371,9 @@ class _K7InsightsScreenState extends State<K7InsightsScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? const Color(0xFF1B4332) : const Color(0xFF888888),
+                  color: isSelected
+                      ? const Color(0xFF1B4332)
+                      : const Color(0xFF888888),
                   width: isSelected ? 6.5 : 2.0,
                 ),
               ),
