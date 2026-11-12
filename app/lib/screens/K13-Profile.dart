@@ -5,7 +5,9 @@ import 'package:kardex/screens/K15-manageuseraccess.dart';
 import 'package:kardex/screens/K4-connectpaypal.dart';
 import 'package:kardex/screens/K6-Dashboard.dart';
 import 'package:kardex/screens/K9-Reports.dart';
+import 'package:kardex/screens/K16-Login.dart';
 import 'package:kardex/widgets/kardex_logo.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class K13ProfileScreen extends StatefulWidget {
   const K13ProfileScreen({super.key});
@@ -16,6 +18,34 @@ class K13ProfileScreen extends StatefulWidget {
 
 class _K13ProfileScreenState extends State<K13ProfileScreen> {
   int _currentIndex = 3; // Profile is index 3
+  String _displayName = 'Kardex user';
+  String _email = 'No email available';
+
+  @override
+  void initState() {
+    super.initState();
+    final user = Supabase.instance.client.auth.currentUser;
+    final metadata = user?.userMetadata ?? const <String, dynamic>{};
+    final name = metadata['full_name'] ?? metadata['name'] ?? metadata['display_name'];
+    _displayName = name is String && name.trim().isNotEmpty ? name : (user?.email ?? _displayName);
+    _email = user?.email ?? _email;
+  }
+
+  Future<void> _logout() async {
+    try {
+      await Supabase.instance.client.auth.signOut();
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const K16LoginScreen()),
+        (_) => false,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not log out: $error')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,8 +82,8 @@ class _K13ProfileScreenState extends State<K13ProfileScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // User Name & Email
-                    const Text(
-                      'Asmita Ghosal',
+                    Text(
+                      _displayName,
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
@@ -62,8 +92,8 @@ class _K13ProfileScreenState extends State<K13ProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    const Text(
-                      'ag@example.test',
+                    Text(
+                      _email,
                       style: TextStyle(
                         fontSize: 14,
                         color: Color(0xFF777777),
@@ -189,6 +219,15 @@ class _K13ProfileScreenState extends State<K13ProfileScreen> {
                     _buildActionButton('Manage sessions'),
                     const SizedBox(height: 12),
                     _buildActionButton('Reauthenticate account'),
+                    const SizedBox(height: 32),
+
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: _logout,
+                        child: const Text('Log out'),
+                      ),
+                    ),
                     const SizedBox(height: 32),
 
                     // Section 6: Support

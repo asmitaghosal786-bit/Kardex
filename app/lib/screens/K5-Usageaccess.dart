@@ -10,14 +10,30 @@ class K5UsageAccessScreen extends StatefulWidget {
   State<K5UsageAccessScreen> createState() => _K5UsageAccessScreenState();
 }
 
-class _K5UsageAccessScreenState extends State<K5UsageAccessScreen> {
+class _K5UsageAccessScreenState extends State<K5UsageAccessScreen>
+    with WidgetsBindingObserver {
   bool _hasAccess = false;
   bool _consented = false;
+  bool _processing = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _refreshAccess();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshAccess();
+    }
   }
 
   Future<void> _refreshAccess() async {
@@ -220,45 +236,56 @@ class _K5UsageAccessScreenState extends State<K5UsageAccessScreen> {
                 height: 56,
                 child: ElevatedButton(
                   onPressed: () async {
-                    if (!_consented) {
-                      final consent = await showDialog<bool>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Share usage signals?'),
-                          content: const Text('KARDEX will read foreground time and launch signals only after you consent.'),
-                          actions: [
-                            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Not now')),
-                            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('I consent')),
-                          ],
+                    if (_processing) return;
+                    setState(() => _processing = true);
+                    try {
+                      if (!_consented) {
+                        final consent = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Share usage signals?'),
+                            content: const Text('KARDEX will read foreground time and launch signals only after you consent.'),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Not now')),
+                              FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('I consent')),
+                            ],
+                          ),
+                        );
+                        if (consent != true) return;
+                        if (mounted) setState(() => _consented = true);
+                      }
+                      if (!_hasAccess) {
+                        await UsageAccess.requestAccess();
+                        await _refreshAccess();
+                        return;
+                      }
+                      final rows = await UsageAccess.query();
+                      final end = DateTime.now();
+                      final start = end.subtract(const Duration(days: 30));
+                      for (final row in rows) {
+                        await GuardianApi().addUsage(
+                          usageMinutes: (row['usage_minutes'] as num).toDouble(),
+                          periodStart: start.toIso8601String(),
+                          periodEnd: end.toIso8601String(),
+                          androidPackage: row['android_package'] as String,
+                          source: 'measured',
+                        );
+                      }
+                      if (!context.mounted) return;
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const K6DashboardScreen(),
                         ),
                       );
-                      if (consent != true) return;
-                      setState(() => _consented = true);
-                    }
-                    if (!_hasAccess) {
-                      await UsageAccess.requestAccess();
-                      await _refreshAccess();
-                      return;
-                    }
-                    final rows = await UsageAccess.query();
-                    final end = DateTime.now();
-                    final start = end.subtract(const Duration(days: 30));
-                    for (final row in rows) {
-                      await GuardianApi().addUsage(
-                        usageMinutes: (row['usage_minutes'] as num).toDouble(),
-                        periodStart: start.toIso8601String(),
-                        periodEnd: end.toIso8601String(),
-                        androidPackage: row['android_package'] as String,
-                        source: 'measured',
+                    } catch (error) {
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(error.toString().replaceFirst('Bad state: ', ''))),
                       );
+                    } finally {
+                      if (mounted) setState(() => _processing = false);
                     }
-                    if (!context.mounted) return;
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const K6DashboardScreen(),
-                      ),
-                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1B4332),
@@ -268,8 +295,12 @@ class _K5UsageAccessScreenState extends State<K5UsageAccessScreen> {
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: const Text(
-                    'Set up usage access',
+                  child: Text(
+                    _processing
+                        ? 'Loading usage…'
+                        : _hasAccess
+                            ? 'Continue with measured usage'
+                            : 'Set up usage access',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -277,6 +308,19 @@ class _K5UsageAccessScreenState extends State<K5UsageAccessScreen> {
                   ),
                 ),
               ),
+            ),
+            TextButton(
+              onPressed: _processing
+                  ? null
+                  : () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const K6DashboardScreen(),
+                        ),
+                      );
+                    },
+              child: const Text('Continue with usage'),
             ),
           ],
         ),
