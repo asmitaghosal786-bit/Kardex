@@ -115,7 +115,7 @@ class GuardianApi {
       final detail = data is Map<String, dynamic> ? data['detail'] : null;
       throw StateError(
         detail?.toString() ??
-            'Guardian API request failed (${response.statusCode}): '
+            'Kardex API request failed (${response.statusCode}): '
                 '${response.body.trim()}',
       );
     }

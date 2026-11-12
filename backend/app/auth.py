@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated
 
 import jwt
@@ -7,6 +8,7 @@ from jwt import PyJWKClient
 
 from .config import get_settings
 
+logger = logging.getLogger(__name__)
 bearer = HTTPBearer(auto_error=False)
 jwks_clients: dict[str, PyJWKClient] = {}
 
@@ -51,6 +53,7 @@ def current_user(
             options=options,
         )
     except jwt.PyJWTError as exc:
+        logger.warning("Supabase JWT validation failed: %s: %s", type(exc).__name__, exc)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Supabase JWT") from exc
     user_id = claims.get("sub")
     if not user_id:
