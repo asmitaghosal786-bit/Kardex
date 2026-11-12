@@ -4,6 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    database_url: str = ""
     database_path: str = "guardian.db"
     supabase_jwt_secret: str = ""
     supabase_jwt_issuer: str = ""

@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import jwt
+from psycopg.errors import UniqueViolation
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -118,9 +119,10 @@ async def recommendations(user_id: str = Depends(current_user)) -> list[dict[str
         for finding in findings:
             rid = f"rec-{finding['subscription_id']}-{finding['kind']}"
             conn.execute(
-                """INSERT OR IGNORE INTO recommendations
+                """INSERT INTO recommendations
                 (id,user_id,subscription_id,kind,status,title,finding_json,data_origin,created_at,updated_at)
-                VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                VALUES (?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(id) DO NOTHING""",
                 (rid, user_id, finding["subscription_id"], finding["kind"], "open", finding["title"],
                  json.dumps(finding), "demo_seed" if settings.demo_mode else "measured", now(), now()),
             )
@@ -172,7 +174,7 @@ async def report_transactions(
             where.append("status = ?")
             args.append(status)
         clause = " AND ".join(where)
-        total = conn.execute(f"SELECT COUNT(*) FROM transactions WHERE {clause}", tuple(args)).fetchone()[0]
+        total = conn.execute(f"SELECT COUNT(*) AS count FROM transactions WHERE {clause}", tuple(args)).fetchone()["count"]
         args.extend([(page - 1) * page_size, page_size])
         items = rows(conn, f"SELECT * FROM transactions WHERE {clause} ORDER BY {order} DESC LIMIT ? OFFSET ?", tuple(args))
         return {"items": items, "page": page, "page_size": page_size, "total": total}
@@ -442,7 +444,7 @@ async def paypal_webhook(request: Request, paypal_auth_algo: str | None = Header
         try:
             conn.execute("INSERT INTO webhook_events VALUES (?,?,?,?,?)",
                          (secrets.token_urlsafe(12), event_id, event.get("event_type", ""), json.dumps(event), now()))
-        except sqlite3.IntegrityError:
+        except (sqlite3.IntegrityError, UniqueViolation):
             return {"status": "already_processed"}
         resource = event.get("resource", {})
         event_type = event.get("event_type")
@@ -470,9 +472,15 @@ async def paypal_webhook(request: Request, paypal_auth_algo: str | None = Header
             if sub:
                 transaction_id = resource.get("sale_id") or event_id
                 conn.execute(
-                    """INSERT OR REPLACE INTO transactions
+                    """INSERT INTO transactions
                     (id,user_id,provider_id,merchant,amount,currency,occurred_at,status,category,subscription_id,data_origin)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                    ON CONFLICT(id) DO UPDATE SET
+                      user_id=excluded.user_id, provider_id=excluded.provider_id,
+                      merchant=excluded.merchant, amount=excluded.amount,
+                      currency=excluded.currency, occurred_at=excluded.occurred_at,
+                      status=excluded.status, category=excluded.category,
+                      subscription_id=excluded.subscription_id, data_origin=excluded.data_origin""",
                     (f"paypal-{transaction_id}", sub["user_id"], provider_id, sub["merchant"],
                      float(amount.get("total", amount.get("value", 0))), amount.get("currency", "USD"),
                      resource.get("update_time", now()), "COMPLETED", sub["category"], sub["id"], "paypal_sandbox"),

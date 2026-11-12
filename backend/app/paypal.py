@@ -80,9 +80,15 @@ class PayPalClient:
                 amount = item.get("amount_with_breakdown", {}).get("gross_amount", item.get("amount", {}))
                 with connection() as conn:
                     conn.execute(
-                        """INSERT OR REPLACE INTO transactions
+                        """INSERT INTO transactions
                         (id,user_id,provider_id,merchant,amount,currency,occurred_at,status,category,subscription_id,data_origin)
-                        VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                        ON CONFLICT(id) DO UPDATE SET
+                          user_id=excluded.user_id, provider_id=excluded.provider_id,
+                          merchant=excluded.merchant, amount=excluded.amount,
+                          currency=excluded.currency, occurred_at=excluded.occurred_at,
+                          status=excluded.status, category=excluded.category,
+                          subscription_id=excluded.subscription_id, data_origin=excluded.data_origin""",
                         (f"paypal-{transaction_id}", user_id, subscription["provider_id"],
                          subscription["merchant"], float(amount.get("value", 0)),
                          amount.get("currency_code", "USD"), item.get("time", now()),

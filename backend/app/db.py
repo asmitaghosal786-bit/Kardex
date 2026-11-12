@@ -1,6 +1,10 @@
+import re
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
+
+import psycopg
+from psycopg.rows import dict_row
 
 from .config import get_settings
 
@@ -61,14 +65,50 @@ def now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+class DatabaseConnection:
+    def __init__(self, conn, postgres: bool):
+        self._conn = conn
+        self._postgres = postgres
+
+    def execute(self, query: str, args=()):
+        if self._postgres:
+            query = re.sub(r"\?", "%s", query)
+        return self._conn.execute(query, args)
+
+    def executescript(self, script: str) -> None:
+        for statement in script.split(";"):
+            statement = statement.strip()
+            if statement:
+                self.execute(statement)
+
+    def commit(self) -> None:
+        self._conn.commit()
+
+    def rollback(self) -> None:
+        self._conn.rollback()
+
+    def close(self) -> None:
+        self._conn.close()
+
+
 @contextmanager
 def connection():
-    conn = sqlite3.connect(get_settings().database_path)
-    conn.row_factory = sqlite3.Row
+    settings = get_settings()
+    postgres = bool(settings.database_url)
+    if postgres:
+        conn = psycopg.connect(settings.database_url, row_factory=dict_row, connect_timeout=10)
+    else:
+        sqlite_conn = sqlite3.connect(settings.database_path)
+        sqlite_conn.row_factory = sqlite3.Row
+        conn = sqlite_conn
+    database = DatabaseConnection(conn, postgres)
     try:
-        conn.executescript(SCHEMA)
-        yield conn
-        conn.commit()
+        database.executescript(SCHEMA)
+        yield database
+        database.commit()
+    except Exception:
+        database.rollback()
+        raise
     finally:
-        conn.close()
+        database.close()
 

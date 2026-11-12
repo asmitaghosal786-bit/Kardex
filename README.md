@@ -41,6 +41,8 @@ Create `backend/.env` locally from `backend/.env.example`. Never commit this fil
 
 | Variable | Value |
 |---|---|
+| `DATABASE_URL` | Supabase Postgres connection string from **Project Settings → Database → Connection string**. Keep it backend-only; when set, it takes precedence over local SQLite. |
+| `DATABASE_PATH` | Local SQLite fallback path used only when `DATABASE_URL` is blank. |
 | `SUPABASE_JWT_SECRET` | Legacy HS256 projects only: Supabase Dashboard → Project Settings → API → JWT Secret. Do not use the anon/publishable key. |
 | `SUPABASE_JWT_ISSUER` | Usually `https://<project-ref>.supabase.co/auth/v1`; leave blank if your Supabase JWT setup does not require issuer validation. |
 | `SUPABASE_JWT_AUDIENCE` | Usually `authenticated`; leave blank only if your project does not include an audience claim. |
@@ -56,6 +58,8 @@ Create `backend/.env` locally from `backend/.env.example`. Never commit this fil
 | `LLM_MODEL` | `gemini-3.5-flash-lite` |
 
 The attached PayPal screenshot shows the correct **Sandbox REST API app** area. The visible Client ID belongs in `PAYPAL_CLIENT_ID`; reveal/copy the matching Secret into `PAYPAL_CLIENT_SECRET`. Do not use Live credentials, and do not put either PayPal value in Flutter or the web app.
+
+For Render, set `DATABASE_URL` to the Supabase Postgres connection string and leave `DATABASE_PATH` as `guardian.db`. The API creates its tables on first connection, so no Render disk is required. Use the Supabase connection pooler string when the direct database connection is not reachable from the deployment environment.
 
 For Flutter, pass only public Supabase configuration and local URLs:
 
