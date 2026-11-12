@@ -38,7 +38,7 @@ class PayPalClient:
         return await self.request("GET", f"/v1/billing/subscriptions/{provider_id}")
 
     async def list_plans(self) -> list[dict[str, Any]]:
-        payload = await self.request("GET", "/v1/billing/plans", params={"page_size": 100})
+        payload = await self.request("GET", "/v1/billing/plans", params={"page_size": 20})
         return payload.get("plans", [])
 
     async def create_subscription(self, plan_id: str, return_url: str, cancel_url: str) -> dict[str, Any]:
