@@ -21,7 +21,7 @@ export function AppShell() {
   }, [location.pathname, location.search, navigate, token]);
 
   if (!token) {
-    return <main className="center-state"><h1>Subscription Guardian</h1><p>{error || "Open this report from the mobile app using a one-time code."}</p></main>;
+    return <main className="center-state"><h1>Kardex</h1><p>{error || "Open this report from the mobile app using a one-time code."}</p></main>;
   }
   return (
     <div className="app-shell">

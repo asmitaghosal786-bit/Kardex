@@ -45,7 +45,7 @@ class PayPalClient:
         return await self.request(
             "POST", "/v1/billing/subscriptions",
             json={"plan_id": plan_id, "application_context": {
-                "brand_name": "Subscription Guardian",
+                "brand_name": "Kardex",
                 "user_action": "SUBSCRIBE_NOW",
                 "return_url": return_url,
                 "cancel_url": cancel_url,

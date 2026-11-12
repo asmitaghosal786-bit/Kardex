@@ -56,7 +56,7 @@ export function SpendingPage({ token }: { token: string }) {
         <div>
           <p className="eyebrow">{studioEnabled ? "AG STUDIO EXPLORER" : "SPENDING EXPLORER · COMMUNITY FALLBACK"}</p>
           <h1>Make recurring spending visible.</h1>
-          <p>Guardian AI explains deterministic findings; savings are estimates, never guarantees.</p>
+          <p>Kardex AI explains deterministic findings; savings are estimates, never guarantees.</p>
         </div>
         <div className="health-score"><span>HEALTH</span><strong>{dashboard.health.score}</strong>/100</div>
       </div>
@@ -69,7 +69,7 @@ export function SpendingPage({ token }: { token: string }) {
         <>
           <section className="dashboard-grid">
             <div className="card chart-card"><h2>Category spend</h2><ResponsiveContainer width="100%" height={260}><BarChart data={categories}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="category" /><YAxis /><Tooltip /><Bar dataKey="amount" fill="#146c56" radius={[8, 8, 0, 0]} /></BarChart></ResponsiveContainer></div>
-            <div className="card"><h2>Guardian findings</h2>{dashboard.recommendations.length === 0 ? <p className="muted">No findings yet.</p> : dashboard.recommendations.map((recommendation) => <article className="finding" key={recommendation.id}><div><strong>{recommendation.title}</strong><p>{recommendation.why_it_matters}</p></div><span className="origin-badge">{recommendation.data_origin}</span></article>)}</div>
+            <div className="card"><h2>Kardex findings</h2>{dashboard.recommendations.length === 0 ? <p className="muted">No findings yet.</p> : dashboard.recommendations.map((recommendation) => <article className="finding" key={recommendation.id}><div><strong>{recommendation.title}</strong><p>{recommendation.why_it_matters}</p></div><span className="origin-badge">{recommendation.data_origin}</span></article>)}</div>
           </section>
           <section className="card"><h2>Subscription grid</h2><div className="grid-wrap"><AgGridReact theme={themeQuartz} rowData={gridRows} columnDefs={gridColumns} /></div></section>
         </>

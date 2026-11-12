@@ -19,7 +19,7 @@ from .guardian import analyze, health_score
 from .llm import agent_answer, explain
 from .paypal import PayPalClient
 
-app = FastAPI(title="Subscription Guardian API", version="0.1.0")
+app = FastAPI(title="Kardex API", version="0.1.0")
 settings = get_settings()
 web_origins = [origin.strip() for origin in settings.web_origin.split(",") if origin.strip()]
 app.add_middleware(
@@ -353,7 +353,7 @@ async def approve(recommendation_id: str, user_id: str = Depends(current_user)) 
         if not sub or not sub["provider_id"]:
             raise HTTPException(status_code=409, detail="No PayPal subscription id is available for this recommendation")
     try:
-        await PayPalClient().cancel_subscription(sub["provider_id"], "Cancelled from Subscription Guardian after user approval")
+        await PayPalClient().cancel_subscription(sub["provider_id"], "Cancelled from Kardex after user approval")
     except Exception as exc:
         raise HTTPException(status_code=502, detail="PayPal cancellation request failed") from exc
     with connection() as conn:
